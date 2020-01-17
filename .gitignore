@@ -1,0 +1,13 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# PyCharm directory
+.idea/
+
+# Virtual environment
+venv/
+
+# Experiment directory
+experiments/*
+!experiments/vgg19_flowers

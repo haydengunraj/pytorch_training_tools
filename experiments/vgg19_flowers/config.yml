@@ -1,0 +1,50 @@
+model:
+  type: vgg19
+  pretrained: false
+  num_classes: 102
+train_dataset:
+  type: ImageFolder
+  root: D:\Project_Data\102flowers\train
+  transform:
+    - type: ResizeWithPad
+      size: 256
+    - type: RandomHorizontalFlip
+    - type: RandomVerticalFlip
+    - type: ToTensor
+    - type: Normalize
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+val_dataset:
+  type: ImageFolder
+  root: D:\Project_Data\102flowers\val
+  transform:
+    - type: ResizeWithPad
+      size: 256
+    - type: ToTensor
+    - type: Normalize
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+trainer:
+  type: SoftmaxTrainer
+  batch_size: 24
+evaluator:
+  type: Evaluator
+  metrics: [loss, accuracy]
+  batch_size: 24
+loss:
+  type: CrossEntropyLoss
+optimizer:
+  type: SGD
+  lr: 0.001
+  momentum: 0.9
+scheduler:
+  type: ExponentialLR
+  gamma: 0.98
+saver:
+  type: CheckpointSaver
+  save_interval: 1
+  model_prefix: model_weights_epoch_
+  save_best_only: true
+  metric: accuracy
+writer:
+  type: SummaryWriter
