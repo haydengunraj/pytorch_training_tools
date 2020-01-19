@@ -133,15 +133,3 @@ class HoldoutDataset(Dataset):
 
     def __len__(self):
         return len(self.indices)
-
-
-if __name__ == '__main__':
-    import torchvision.transforms as transforms
-    from utils import Unsqueeze
-    dataset = KFoldDatasetFolder('/Users/hayden/Projects/LNDb/data/train_data_C', np.load, 4, extensions=('npy',),
-                                 transform=transforms.Compose([transforms.ToTensor(), Unsqueeze(0)]))
-
-    print(len(dataset.targets), len(dataset.samples))
-    for k in range(4):
-        dataset.set_holdout(k)
-        print(len(dataset.targets), len(dataset.samples))

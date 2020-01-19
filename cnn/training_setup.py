@@ -31,29 +31,49 @@ MODULES = {
     'writer': [tensorboardX]
 }
 
-# TODO: update to match new style
-# def initialize_experiment_kfold(config, holdout):
-#     config['train_dataset']['holdout'] = holdout
-#     if 'writer' in config:
-#         config['writer']['logdir'] = os.path.join(config['writer']['logdir'], 'holdout{}'.format(holdout))
-#     if 'saver' in config:
-#         config['saver']['checkpoint_dir'] = os.path.join(config['saver']['checkpoint_dir'], 'holdout{}'.format(holdout))
-#     return initialize_experiment(config)
+
+def initialize_experiment_kfold(experiment, holdout):
+    """ Initialize an experiment using a kfold dataset """
+    # Get experiment directory and config
+    config, experiment_dir = load_config(experiment)
+
+    # Check dataset type
+    if config['train_dataset']['type'] != 'KFoldImageFolder':
+        raise ValueError('KFold experiements must use a KFoldImageFolder as the train dataset')
+
+    # Set holdout and check number of folds
+    config['train_dataset']['holdout'] = holdout
+    n_folds = config['train_dataset']['folds']
+
+    # Change logging and save directories
+    if 'writer' in config:
+        config['writer']['logdir'] = os.path.join(config['writer']['logdir'], 'holdout{}'.format(holdout))
+    if 'saver' in config:
+        config['saver']['checkpoint_dir'] = os.path.join(config['saver']['checkpoint_dir'], 'holdout{}'.format(holdout))
+
+    # Intitialize modules
+    return _initialize(experiment_dir, config) + (n_folds,)
 
 
 def initialize_experiment(experiment, resume=False, reset_optimizer=False, reset_scheduler=False):
+    # Get experiment directory and config
+    config, experiment_dir = load_config(experiment)
+
+    # Intitialize modules
+    return _initialize(experiment_dir, config, resume=resume, reset_optimizer=reset_optimizer,
+                       reset_scheduler=reset_scheduler)
+
+
+def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, reset_scheduler=False):
+    """ Initializes training modules """
+    # Get device
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print('Using device {}'.format(device))
 
     # Set torch home dir
     os.environ['TORCH_HOME'] = TORCH_HOME
 
-    # Set experiment directory
-    experiment_dir = os.path.join(EXPERIMENT_ROOT, experiment)
-
-    # Load experiment configuration
-    conf_path = os.path.join(experiment_dir, 'config.yml')
-    config = load_config(conf_path)
+    # Epoch and step counters
     start_epoch = 0
     start_step = 0
 
@@ -98,10 +118,12 @@ def initialize_experiment(experiment, resume=False, reset_optimizer=False, reset
             optimizer, saver, writer, device, start_epoch, start_step)
 
 
-def load_config(config_file):
+def load_config(experiment):
+    experiment_dir = os.path.join(EXPERIMENT_ROOT, experiment)
+    config_file = os.path.join(experiment_dir, 'config.yml')
     with open(config_file) as f:
         config = yaml.safe_load(f)
-    return config
+    return config, experiment_dir
 
 
 def get_lr(optimizer):
