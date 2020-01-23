@@ -43,7 +43,6 @@ scheduler:
 saver:
   type: CheckpointSaver
   save_interval: 1
-  model_prefix: model_weights_epoch_
   save_best_only: true
   metric: accuracy
 writer:

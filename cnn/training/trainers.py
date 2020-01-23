@@ -23,16 +23,15 @@ class Trainer:
 class TripletTrainer(Trainer):
     """Training class which trains one 'epoch' at a time
     Based on FaceNet implementation: https://github.com/davidsandberg/facenet"""
-    def __init__(self, model, dataset, optimizer, loss_func, images_per_class, epoch_size, writer=None, batch_size=1,
+    def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class, epoch_size, writer=None, batch_size=1,
                  num_workers=1, embedding_size=128, classes_per_batch=None):
         super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers)
         if not isinstance(loss_func, TripletLoss):
             raise ValueError('TripletTrainer may not use {} as a loss function'.format(type(loss_func).__name__))
         if batch_size % 3:
             raise ValueError('batch_size must be a multiple of 3')
-        self.classes = dataset.classes
-        self.num_classes = len(self.classes)
-        self.class_indices = [self.dataset.class_to_idx[cls] for cls in self.classes]
+        self.num_classes = num_classes
+        self.class_indices = list(range(self.num_classes))
         target_array = np.array(self.dataset.targets)
         self.class_samples = [np.where(target_array == i)[0] for i in self.class_indices]
         max_per_class = min((len(samples) for samples in self.class_samples))
