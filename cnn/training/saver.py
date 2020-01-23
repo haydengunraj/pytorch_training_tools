@@ -7,8 +7,7 @@ from ..validation.metrics import get_mode
 
 class CheckpointSaver:
     def __init__(self, checkpoint_dir, model, optimizer, scheduler, save_interval=1, last_epoch=None,
-                 model_prefix='model_weights_epoch_', optimizer_prefix='optimizer_state_epoch_',
-                 scheduler_prefix='scheduler_state_epoch_', save_best_only=True, metric='loss'):
+                 prefix='checkpoint_step_', save_best_only=True, metric='loss'):
         self.checkpoint_dir = checkpoint_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, 'checkpoint.json')
         os.makedirs(self.checkpoint_dir, exist_ok=True)
@@ -17,20 +16,15 @@ class CheckpointSaver:
         self.scheduler = scheduler
         self.save_interval = save_interval
         self.last_epoch = last_epoch
-        self.prefixes = {
-            'model': model_prefix,
-            'optimizer': optimizer_prefix,
-            'scheduler': scheduler_prefix
-        }
+        self.prefix = prefix
         self.save_best_only = save_best_only
-        self.save_paths = None
+        self.save_path = None
         self.checkpoint_dict = None
         self.metric = metric
         self.last_metric_val = None
         self.mode = get_mode(metric)
 
     def update_checkpoint(self, epoch, step, metric_vals=None):
-        save_paths, filenames = self._make_save_paths(epoch)
         if not epoch % self.save_interval and epoch != self.last_epoch:
             if self.save_best_only:
                 if metric_vals is None or self.metric not in metric_vals:
@@ -38,7 +32,7 @@ class CheckpointSaver:
                     self.save_best_only = False
                     self.update_checkpoint(epoch, step, metric_vals)
                 elif self.is_improved(metric_vals[self.metric]):
-                    self._save_states(save_paths, filenames, epoch, step)
+                    path = self.save_state(epoch, step)
 
                     if self.last_metric_val is None:
                         save_str = '{} improved from {} to {:.3f}, saving checkpoint'
@@ -47,17 +41,17 @@ class CheckpointSaver:
                     print(save_str.format(self.metric.capitalize(), self.last_metric_val, metric_vals[self.metric]))
                     self.last_metric_val = metric_vals[self.metric]
 
-                    if self.save_paths is not None:
+                    if self.save_path is not None:
                         self._remove_previous_checkpoint()
-                    self.save_paths = save_paths
+                    self.save_path = path
                 else:
                     print('{} worsened from {:.3f} to {:.3f}, not saving checkpoint'.format(
                         self.metric.capitalize(), self.last_metric_val, metric_vals[self.metric]))
             else:
-                self._save_states(save_paths, filenames, epoch, step)
+                self.save_state(epoch, step)
                 print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
         else:
-            self._save_states(save_paths, filenames, epoch, step)
+            self.save_state(epoch, step)
             print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
 
     def is_improved(self, metric_val):
@@ -73,26 +67,27 @@ class CheckpointSaver:
         os.makedirs(checkpoint_dir, exist_ok=True)
         self.checkpoint_dir = checkpoint_dir
 
-    def _save_states(self, save_paths, filenames, epoch, step):
-        torch.save(self.model.state_dict(), save_paths['model'])
-        torch.save(self.optimizer.state_dict(), save_paths['optimizer'])
-        if self.scheduler is not None:
-            torch.save(self.scheduler.state_dict(), save_paths['scheduler'])
-        self._update_checkpoint_file(filenames, epoch, step)
+    def save_state(self, epoch, step):
+        path, filename = self._make_save_path(step)
+        state_dict = {
+            'model': self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+            'scheduler': self.scheduler.state_dict() if self.scheduler is not None else None
+        }
+        torch.save(state_dict, path)
+        self._update_checkpoint_file(filename, epoch, step)
+        return path
 
     def _remove_previous_checkpoint(self):
-        for save_path in self.save_paths.values():
-            try:
-                os.unlink(save_path)
-            except FileNotFoundError:
-                print('Could not delete state file at {}'.format(save_path))
-                pass
+        try:
+            os.unlink(self.save_path)
+        except FileNotFoundError:
+            print('Could not delete checkpoint file at {}'.format(self.save_path))
+            pass
 
-    def _update_checkpoint_file(self, filenames, epoch, step):
+    def _update_checkpoint_file(self, filename, epoch, step):
         self.checkpoint_dict = {
-            'model_state': filenames['model'],
-            'optimizer_state': filenames['optimizer'],
-            'scheduler_state': filenames['scheduler'] if self.scheduler is not None else None,
+            'checkpoint': filename,
             'epoch': str(epoch),
             'step': str(step)
         }
@@ -102,13 +97,11 @@ class CheckpointSaver:
         with open(self.checkpoint_file, 'w') as f:
             json.dump(self.checkpoint_dict, f)
 
-    def _make_save_paths(self, epoch):
-        save_paths, filenames = {}, {}
-        postfix = '{}.pth'.format(epoch)
-        for component, prefix in self.prefixes.items():
-            filenames[component] = prefix + postfix
-            save_paths[component] = os.path.join(self.checkpoint_dir, filenames[component])
-        return save_paths, filenames
+    def _make_save_path(self, step):
+        postfix = '{}.pth'.format(step)
+        filename = self.prefix + postfix
+        path = os.path.join(self.checkpoint_dir, filename)
+        return path, filename
 
 
 

@@ -141,11 +141,12 @@ def load_checkpoint(experiment_dir, model, optimizer, scheduler, reset_optimizer
     if os.path.isfile(checkpoint_file):
         with open(checkpoint_file, 'r') as f:
             ckpt = json.load(f)
-        _load_state_dict(model, checkpoint_dir, ckpt.get('model_state'))
+        state_dict = torch.load(os.path.join(checkpoint_dir, ckpt['checkpoint']))
+        model.load_state_dict(state_dict['model'])
         if not reset_optimizer:
-            _load_state_dict(optimizer, checkpoint_dir, ckpt.get('optimizer_state'))
-        if not reset_scheduler:
-            _load_state_dict(scheduler, checkpoint_dir, ckpt.get('scheduler_state'))
+            optimizer.load_state_dict(state_dict['optimizer'])
+        if not reset_scheduler and state_dict['scheduler'] is not None:
+            scheduler.load_state_dict(state_dict['scheduler'])
         start_epoch = int(ckpt['epoch'])
         start_step = int(ckpt['step'])
         print('Resuming training from checkpoint at epoch {}, step {}'.format(start_epoch, start_step))
@@ -184,6 +185,7 @@ def get_dataset(config):
         config['extensions'] = tuple(config['extensions'])
     dataset = get_component('dataset', config)
     return dataset
+
 
 def get_transforms(config):
     transform = []
@@ -254,9 +256,3 @@ def _torch_model_fetcher(model_type, config):
     if weights_path is not None:
         model.load_state_dict(torch.load(weights_path))
     return model
-
-
-def _load_state_dict(component, checkpoint_dir, state_dict_file):
-    if component is None or state_dict_file is None:
-        return
-    component.load_state_dict(torch.load(os.path.join(checkpoint_dir, state_dict_file)))
