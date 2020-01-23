@@ -20,11 +20,19 @@ class SplitImageFolder(ImageFolder, SplitDataset):
         get_val_dataset(): Returns the val dataset
 
     """
-    def __init__(self, root, train_fraction=0.8, transform=None, target_transform=None, seed=None):
+    def __init__(self, root, train_fraction=0.8, transform=None, target_transform=None, seed=1):
         super().__init__(root, transform=transform, target_transform=target_transform)
 
         if train_fraction < 0 or train_fraction > 1:
             raise ValueError('train_fraction must be in the range [0, 1]')
+
+        # Sort to ensure deterministic splitting
+        order = np.argsort([s[0] for s in self.samples])
+        self.samples = [self.samples[i] for i in order]
+        self.targets = [self.targets[i] for i in order]
+        self.imgs = self.samples
+
+        # Split data
         self.train_fraction = train_fraction
         self._split(seed)
 
@@ -32,8 +40,7 @@ class SplitImageFolder(ImageFolder, SplitDataset):
         """Splits the data according to self.train_fraction"""
         if len(self.indices[TRAIN_SUBSET]) or len(self.indices[VAL_SUBSET]):
             return
-        if seed is not None:
-            np.random.seed(seed)
+        np.random.seed(seed)
         targets = np.asarray(self.targets)
         for cls in self.classes:
             idx = self.class_to_idx[cls]
