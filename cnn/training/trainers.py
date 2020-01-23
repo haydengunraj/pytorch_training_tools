@@ -7,7 +7,8 @@ from .losses import select_triplets, TripletLoss
 
 
 class Trainer:
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1, num_workers=1):
+    def __init__(self, model, dataset, optimizer, loss_func, writer=None,
+                 batch_size=1, num_workers=1, print_interval=1):
         self.model = model
         self.dataset = dataset
         self.optimizer = optimizer
@@ -15,17 +16,25 @@ class Trainer:
         self.writer = writer
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self._print_interval = print_interval
+        self._loss_sum = 0
 
     def train_epoch(self, epoch, device='cpu', start_step=0):
         raise NotImplementedError
+
+    def _print_loss(self, epoch, step, loss):
+        self._loss_sum += loss
+        if not step % self._print_interval:
+            print('[epoch: {}, step: {}, loss: {:.3f}]'.format(epoch, step, self._loss_sum/self._print_interval))
+            self._loss_sum = 0
 
 
 class TripletTrainer(Trainer):
     """Training class which trains one 'epoch' at a time
     Based on FaceNet implementation: https://github.com/davidsandberg/facenet"""
-    def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class, epoch_size, writer=None, batch_size=1,
-                 num_workers=1, embedding_size=128, classes_per_batch=None):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers)
+    def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class, epoch_size, writer=None,
+                 batch_size=1, num_workers=1, embedding_size=128, classes_per_batch=None, print_interval=1):
+        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, print_interval)
         if not isinstance(loss_func, TripletLoss):
             raise ValueError('TripletTrainer may not use {} as a loss function'.format(type(loss_func).__name__))
         if batch_size % 3:
@@ -97,7 +106,7 @@ class TripletTrainer(Trainer):
                 start_step += 1
                 if self.writer is not None:
                     self.writer.add_scalar('train/loss', loss.item(), start_step)
-                print('[epoch: {}, step: {}, loss: {:.3f}]'.format(epoch + 1, start_step, loss.item()))
+                self._print_loss(epoch + 1, start_step, loss.item())
                 if start_step >= end_step:
                     break
         return start_step
@@ -115,8 +124,9 @@ class TripletTrainer(Trainer):
 
 class SoftmaxTrainer(Trainer):
     """Training class which trains one epoch at a time"""
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1, num_workers=1):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers)
+    def __init__(self, model, dataset, optimizer, loss_func, writer=None,
+                 batch_size=1, num_workers=1, print_interval=1):
+        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, print_interval)
 
     def train_epoch(self, epoch, device='cpu', start_step=0):
         """Train for one epoch"""
@@ -138,5 +148,5 @@ class SoftmaxTrainer(Trainer):
             start_step += 1
             if self.writer is not None:
                 self.writer.add_scalar('train/loss', loss.item(), start_step)
-            print('[epoch: {}, step: {}, loss: {:.3f}]'.format(epoch + 1, start_step, loss.item()))
+            self._print_loss(epoch + 1, start_step, loss.item())
         return start_step
