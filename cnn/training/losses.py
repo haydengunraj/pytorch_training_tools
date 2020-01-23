@@ -62,15 +62,14 @@ class InceptionLoss:
         self.weight = weight
 
     def __call__(self, logits, target):
-        n_logits = len(logits)
-        if n_logits == 1:
+        if isinstance(logits, torch.Tensor):
             return self.loss_func(logits, target)
-        elif n_logits == 2:
+        elif isinstance(logits, tuple) and len(logits) == 2:
             logits, aux_logits = logits
             return self.logit_weight*self._loss_func(logits, target) \
                 + self.aux_weight*self._loss_func(aux_logits, target)
         else:
-            raise ValueError('InceptionLoss call takes 1 or 2 logits, but {} were given'.format(n_logits))
+            raise ValueError('InceptionLoss logits must be a Tensor or a 2-tuple of Tensors')
 
     def _loss_func(self, logits, target):
         if self.include_weight:
