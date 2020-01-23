@@ -25,17 +25,18 @@ def eval_pass(model, dataset, batch_size=1, device='cpu', num_workers=1):
 
 class Evaluator:
     """Wrapper class for eval"""
-    def __init__(self, model, dataset, metrics, writer=None, batch_size=1):
+    def __init__(self, model, dataset, metrics, writer=None, batch_size=1, num_workers=1):
         self.model = model
         self.dataset = dataset
         self.batch_size = batch_size
         self.writer = writer
         self.metrics = get_metrics(metrics)
+        self.num_workers = num_workers
 
-    def eval(self, step, device='cpu', num_workers=1):
+    def eval(self, step, device='cpu'):
         print('Starting eval at step {}'.format(step))
         outputs, labels = eval_pass(self.model, self.dataset, batch_size=self.batch_size,
-                                    device=device, num_workers=num_workers)
+                                    device=device, num_workers=self.num_workers)
         metrics = {name: metric(outputs, labels).item() for name, metric in self.metrics.items()}
         if self.writer is not None:
             for metric_name, metric_val in metrics.items():

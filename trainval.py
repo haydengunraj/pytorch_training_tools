@@ -27,7 +27,7 @@ if __name__ == '__main__':
             writer.add_scalar('train/learning_rate', get_lr(optimizer), step)
 
         # Train one epoch
-        step = trainer.train_epoch(epoch, device=device, num_workers=1, start_step=step)
+        step = trainer.train_epoch(epoch, device=device, start_step=step)
 
         # Update scheduler
         if scheduler is not None:
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
         # Evaluate model
         if evaluator is not None:
-            val_metrics = evaluator.eval(step, device=device, num_workers=1)
+            val_metrics = evaluator.eval(step, device=device)
 
         # Save checkpoint
         if saver is not None:

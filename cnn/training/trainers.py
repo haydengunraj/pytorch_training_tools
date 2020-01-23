@@ -7,16 +7,16 @@ from .losses import select_triplets, TripletLoss
 
 
 class Trainer:
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1, pause_interval=None):
+    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1, num_workers=1):
         self.model = model
         self.dataset = dataset
         self.optimizer = optimizer
         self.loss_func = loss_func
         self.writer = writer
         self.batch_size = batch_size
-        self.pause_interval = pause_interval  # pause training to allow for eval and model saving
+        self.num_workers = num_workers
 
-    def train_epoch(self, epoch, device='cpu', num_workers=1, start_step=0):
+    def train_epoch(self, epoch, device='cpu', start_step=0):
         raise NotImplementedError
 
 
@@ -24,8 +24,8 @@ class TripletTrainer(Trainer):
     """Training class which trains one 'epoch' at a time
     Based on FaceNet implementation: https://github.com/davidsandberg/facenet"""
     def __init__(self, model, dataset, optimizer, loss_func, images_per_class, epoch_size, writer=None, batch_size=1,
-                 embedding_size=128, classes_per_batch=None):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size)
+                 num_workers=1, embedding_size=128, classes_per_batch=None):
+        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers)
         if not isinstance(loss_func, TripletLoss):
             raise ValueError('TripletTrainer may not use {} as a loss function'.format(type(loss_func).__name__))
         if batch_size % 3:
@@ -47,7 +47,7 @@ class TripletTrainer(Trainer):
         self.embedding_size = embedding_size
         self.alpha = self.loss_func.alpha
 
-    def train_epoch(self, epoch, device='cpu', num_workers=1, start_step=0):
+    def train_epoch(self, epoch, device='cpu', start_step=0):
         """Train for one epoch"""
         end_step = start_step + self.epoch_size
         while start_step < end_step:
@@ -55,7 +55,7 @@ class TripletTrainer(Trainer):
             batch_indices = self.sample_images()
             forward_subset = data.Subset(self.dataset, batch_indices)
             forward_loader = data.DataLoader(forward_subset, batch_size=self.batch_size,
-                                             shuffle=False, num_workers=num_workers)
+                                             shuffle=False, num_workers=self.num_workers)
 
             # Perform forward pass
             print('Starting forward pass...', end='')
@@ -82,7 +82,7 @@ class TripletTrainer(Trainer):
             triplets = [i for triplet in triplets for i in triplet]  # flatten triplets
             train_subset = data.Subset(self.dataset, triplets)
             train_loader = data.DataLoader(train_subset, batch_size=self.batch_size,
-                                           shuffle=False, num_workers=num_workers)
+                                           shuffle=False, num_workers=self.num_workers)
 
             # Train on selected triplets
             for batch, lab in train_loader:
@@ -116,14 +116,14 @@ class TripletTrainer(Trainer):
 
 class SoftmaxTrainer(Trainer):
     """Training class which trains one epoch at a time"""
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size)
+    def __init__(self, model, dataset, optimizer, loss_func, writer=None, batch_size=1, num_workers=1):
+        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers)
 
-    def train_epoch(self, epoch, device='cpu', num_workers=1, start_step=0):
+    def train_epoch(self, epoch, device='cpu', start_step=0):
         """Train for one epoch"""
         # Set up dataloader
         train_loader = data.DataLoader(self.dataset, batch_size=self.batch_size,
-                                       shuffle=True, num_workers=num_workers)
+                                       shuffle=True, num_workers=self.num_workers)
         # Train for an epoch
         print('Starting epoch {}'.format(epoch + 1))
         for batch, lab in train_loader:

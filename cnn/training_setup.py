@@ -84,8 +84,12 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
     # Initialize train dataset
     train_dataset = get_dataset(config['train_dataset'])
 
-    # Initialize val dataset
-    val_dataset = get_val_dataset(config, train_dataset)
+    # Check for SplitDataset and initialize val dataset
+    if isinstance(train_dataset, data.SplitDataset):
+        val_dataset = train_dataset.get_val_dataset()
+        train_dataset = train_dataset.get_train_dataset()
+    else:
+        val_dataset = get_dataset(config['val_dataset']) if 'val_dataset' in config else None
 
     # Initialize loss function (if necessary)
     loss_func = get_loss(config['loss'], device)
@@ -180,15 +184,6 @@ def get_dataset(config):
         config['extensions'] = tuple(config['extensions'])
     dataset = get_component('dataset', config)
     return dataset
-
-
-def get_val_dataset(config, train_dataset):
-    if 'val_dataset' in config:
-        return get_dataset(config['val_dataset'])
-    if isinstance(train_dataset, data.KFoldDatasetFolder):
-        return train_dataset.holdout_dataset
-    return None
-
 
 def get_transforms(config):
     transform = []
