@@ -48,3 +48,31 @@ class TripletLoss:
 
     def __call__(self, triplets):
         return triplet_loss(triplets, self.alpha)
+
+
+class InceptionLoss:
+    def __init__(self, loss_type, logit_weight=1.0, aux_weight=1.0, weight=None):
+        self.loss_func = getattr(F, loss_type)
+        if self.loss_func is None:
+            raise ValueError('torch.nn.functional does not define', loss_type)
+        self.logit_weight = logit_weight
+        self.aux_weight = aux_weight
+
+        self.include_weight = loss_type in ('cross_entropy',)
+        self.weight = weight
+
+    def __call__(self, logits, target):
+        n_logits = len(logits)
+        if n_logits == 1:
+            return self.loss_func(logits, target)
+        elif n_logits == 2:
+            logits, aux_logits = logits
+            return self.logit_weight*self._loss_func(logits, target) \
+                + self.aux_weight*self._loss_func(aux_logits, target)
+        else:
+            raise ValueError('InceptionLoss call takes 1 or 2 logits, but {} were given'.format(n_logits))
+
+    def _loss_func(self, logits, target):
+        if self.include_weight:
+            return self.loss_func(logits, target, weight=self.weight)
+        return self.loss_func(logits, target)
