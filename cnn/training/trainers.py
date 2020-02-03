@@ -149,3 +149,31 @@ class SoftmaxTrainer(Trainer):
             start_step += 1
             self._log_and_print_loss(epoch + 1, start_step, loss.item())
         return start_step
+
+
+class DWSConvTrainer(Trainer):
+    """Training class which trains one epoch at a time"""
+    def __init__(self, model, dataset, optimizer, loss_func, writer=None,
+                 batch_size=1, num_workers=1, log_interval=1):
+        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, log_interval)
+
+    def train_epoch(self, epoch, device='cpu', start_step=0):
+        """Train for one epoch"""
+        # Set up dataloader
+        train_loader = data.DataLoader(self.dataset, batch_size=self.batch_size,
+                                       shuffle=True, num_workers=self.num_workers)
+        # Train for an epoch
+        print('Starting epoch {}'.format(epoch + 1))
+        for batch, lab in train_loader:
+            self.optimizer.zero_grad()
+
+            batch, lab = batch.to(device), lab.to(device)
+            out = self.model(batch)
+
+            loss = self.loss_func(out, batch)
+            loss.backward()
+            self.optimizer.step()
+
+            start_step += 1
+            self._log_and_print_loss(epoch + 1, start_step, loss.item())
+        return start_step

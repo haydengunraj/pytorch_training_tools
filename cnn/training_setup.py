@@ -13,6 +13,8 @@ from . import models as cnn_models
 from . import data
 from .validation import eval
 from .training import trainers, losses, saver
+from .optim.utils import conv2d_to_dws_conv2d
+from .optim.dws import L2DifferenceLoss
 
 TORCH_HOME = 'weights'
 EXPERIMENT_ROOT = 'experiments'
@@ -62,6 +64,69 @@ def initialize_experiment(experiment, resume=False, reset_optimizer=False, reset
     # Intitialize modules
     return _initialize(experiment_dir, config, resume=resume, reset_optimizer=reset_optimizer,
                        reset_scheduler=reset_scheduler)
+
+
+def initialize_conversion_experiment(experiment, resume=False, reset_optimizer=False, reset_scheduler=False):
+    """ Initializes training modules """
+    # Get experiment directory and config
+    config, experiment_dir = load_config(experiment)
+
+    # Get device
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    print('Using device {}'.format(device))
+
+    # Set torch home dir
+    os.environ['TORCH_HOME'] = TORCH_HOME
+
+    # Epoch and step counters
+    start_epoch = 0
+    start_step = 0
+
+    # Initialize model
+    base_model = get_model(config['model'])
+    model = conv2d_to_dws_conv2d(base_model)
+    base_model.to(device)
+    model.to(device)
+
+    # Initialize train dataset
+    train_dataset = get_dataset(config['train_dataset'])
+
+    # Check for SplitDataset and initialize val dataset
+    if isinstance(train_dataset, data.SplitDataset):
+        val_dataset = train_dataset.get_val_dataset()
+        train_dataset = train_dataset.get_train_dataset()
+    else:
+        val_dataset = get_dataset(config['val_dataset']) if 'val_dataset' in config else None
+
+    # Initialize loss function
+    loss_func = L2DifferenceLoss(base_model, model)
+
+    # Initialize optimizer
+    optimizer = get_optimizer(config['optimizer'], model)
+
+    # Initialize scheduler
+    scheduler = get_scheduler(config['scheduler'], optimizer) if 'scheduler' in config else None
+
+    # Resume from existing checkpoint if desired
+    if resume:
+        start_epoch, start_step = load_checkpoint(experiment_dir, model, optimizer,
+                                                  scheduler, reset_optimizer, reset_scheduler)
+
+    # Initialize event writer
+    writer = get_writer(config['writer'], experiment_dir, start_step) if 'writer' in config else None
+
+    # Initialize trainer
+    trainer = get_trainer(config['trainer'], model, train_dataset, optimizer, loss_func, writer)
+
+    # Initialize evaluator
+    evaluator = get_evaluator(
+        config['evaluator'], model, val_dataset, loss_func, writer) if 'evaluator' in config else None
+
+    # Initialize checkpoint saver
+    saver = get_saver(config['saver'], experiment_dir, model, optimizer, scheduler) if 'saver' in config else None
+
+    return (model, train_dataset, val_dataset, trainer, evaluator, scheduler, loss_func,
+            optimizer, saver, writer, device, start_epoch, start_step)
 
 
 def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, reset_scheduler=False):
