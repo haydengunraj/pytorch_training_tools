@@ -4,7 +4,7 @@ from torchvision.datasets.folder import ImageFolder
 from .split_dataset import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
 
 
-class SplitImageFolder(ImageFolder, SplitDataset):
+class SplitImageFolder(SplitDataset, ImageFolder):
     """A wrapper class which splits an ImageFolder dataset into train/test sets
 
     Args:
@@ -21,7 +21,7 @@ class SplitImageFolder(ImageFolder, SplitDataset):
 
     """
     def __init__(self, root, train_fraction=0.8, transform=None, target_transform=None, seed=1):
-        super().__init__(root, transform=transform, target_transform=target_transform)
+        super().__init__(root=root, transform=transform, target_transform=target_transform)
 
         if train_fraction < 0 or train_fraction > 1:
             raise ValueError('train_fraction must be in the range [0, 1]')

@@ -1,12 +1,12 @@
 import os
 import sys
 import numpy as np
-from torchvision.datasets.folder import make_dataset
+from torchvision.datasets.folder import VisionDataset, make_dataset
 
 from .split_dataset import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
 
 
-class KFoldDatasetFolder(SplitDataset):
+class KFoldDatasetFolder(SplitDataset, VisionDataset):
     """A generic data loader where the samples are arranged in this way:
 
         root/fold_prefix0/class_x/xxx.ext
@@ -50,6 +50,7 @@ class KFoldDatasetFolder(SplitDataset):
     def __init__(self, root, loader, folds, holdout=None, fold_prefix='fold', extensions=None,
                  transform=None, target_transform=None, is_valid_file=None):
         super().__init__(root, transform=transform, target_transform=target_transform)
+        SplitDataset.__init__(self)
         classes, class_to_idx = self._find_classes(os.path.join(self.root, fold_prefix + str(0)))
         samples = []
         fold_indices = []
