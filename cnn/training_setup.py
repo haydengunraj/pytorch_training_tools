@@ -89,7 +89,7 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
         val_dataset = train_dataset.get_val_dataset()
         train_dataset = train_dataset.get_train_dataset()
     else:
-        val_dataset = get_dataset(config['val_dataset']) if 'val_dataset' in config else None
+        val_dataset = get_dataset(config['val_dataset']) if config.get('val_dataset') is not None else None
 
     # Initialize loss function (if necessary)
     loss_func = get_loss(config['loss'], device)
@@ -98,7 +98,7 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
     optimizer = get_optimizer(config['optimizer'], model)
 
     # Initialize scheduler
-    scheduler = get_scheduler(config['scheduler'], optimizer) if 'scheduler' in config else None
+    scheduler = get_scheduler(config['scheduler'], optimizer) if config.get('scheduler') is not None else None
 
     # Resume from existing checkpoint if desired
     if resume:
@@ -106,20 +106,21 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
                                                   scheduler, reset_optimizer, reset_scheduler)
 
     # Initialize event writer
-    writer = get_writer(config['writer'], experiment_dir, start_step) if 'writer' in config else None
+    writer = get_writer(config['writer'], experiment_dir, start_step) if config.get('writer') is not None else None
 
     # Initialize trainer
     trainer = get_trainer(config['trainer'], model, train_dataset, optimizer, loss_func, writer)
 
     # Initialize evaluator
-    evaluator = get_evaluator(
-        config['evaluator'], model, val_dataset, loss_func, writer) if 'evaluator' in config else None
+    evaluator = get_evaluator(config['evaluator'], model, val_dataset, loss_func, writer) \
+        if config.get('evaluator') is not None else None
 
     # Initialize checkpoint saver
-    saver = get_saver(config['saver'], experiment_dir, model, optimizer, scheduler) if 'saver' in config else None
+    checkpoint_saver = get_saver(config['saver'], experiment_dir, model, optimizer, scheduler) \
+        if config.get('saver') is not None else None
 
     return (model, train_dataset, val_dataset, trainer, evaluator, scheduler, loss_func,
-            optimizer, saver, writer, device, start_epoch, start_step)
+            optimizer, checkpoint_saver, writer, device, start_epoch, start_step)
 
 
 def load_config(experiment):
@@ -179,7 +180,9 @@ def get_model(config):
 
 
 def get_dataset(config):
-    config['transform'] = transforms.Compose(get_transforms(config['transform']))
+    tforms = config.get('transform')
+    if tforms is not None:
+        config['transform'] = transforms.Compose(get_transforms(tforms))
     if config['type'] == 'kfold_dataset':
         config['loader'] = get_component('loader', config['loader'])
         config['extensions'] = tuple(config['extensions'])
