@@ -25,7 +25,10 @@ class CheckpointSaver:
         self.mode = get_mode(metric)
 
     def update_checkpoint(self, epoch, step, metric_vals=None):
-        if not epoch % self.save_interval and epoch != self.last_epoch:
+        if epoch == self.last_epoch:
+            self.save_state(epoch, step)
+            print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
+        elif not epoch % self.save_interval:
             if self.save_best_only:
                 if metric_vals is None or self.metric not in metric_vals:
                     print('Metric {} not found in metric vals, defaulting to always saving'.format(self.metric))
@@ -50,9 +53,6 @@ class CheckpointSaver:
             else:
                 self.save_state(epoch, step)
                 print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
-        else:
-            self.save_state(epoch, step)
-            print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
 
     def is_improved(self, metric_val):
         if metric_val is None:

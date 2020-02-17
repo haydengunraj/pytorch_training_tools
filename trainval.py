@@ -17,6 +17,12 @@ if __name__ == '__main__':
      device, start_epoch, start_step) = initialize_experiment(args.experiment, args.resume,
                                                               args.reset_optim, args.reset_sched)
 
+    # Baseline evaluation
+    if evaluator is not None:
+        val_metrics = evaluator.eval(start_epoch, start_step, device=device)
+        if saver is not None:
+            saver.update_checkpoint(start_epoch, start_step, metric_vals=val_metrics)
+
     # Train model
     step = start_step
     model.train()
@@ -35,7 +41,7 @@ if __name__ == '__main__':
 
         # Evaluate model
         if evaluator is not None:
-            val_metrics = evaluator.eval(step, device=device)
+            val_metrics = evaluator.eval(epoch + 1, step, device=device)
 
         # Save checkpoint
         if saver is not None:
