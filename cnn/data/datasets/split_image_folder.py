@@ -2,7 +2,11 @@ import numpy as np
 from torchvision.datasets.folder import ImageFolder
 from math import ceil
 
-from .split_dataset import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
+from .split import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
+
+
+def get_dataset(config):
+    return SplitImageFolder(**config)
 
 
 class SplitImageFolder(SplitDataset, ImageFolder):

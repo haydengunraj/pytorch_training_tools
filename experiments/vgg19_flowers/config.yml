@@ -2,6 +2,10 @@ model:
   type: vgg19
   pretrained: false
   num_classes: 102
+  input_map:
+    images: x
+  output_keys:
+    - logits
 train_dataset:
   type: ImageFolder
   root: D:\Project_Data\102flowers\train
@@ -14,6 +18,9 @@ train_dataset:
     - type: Normalize
       mean: [0.485, 0.456, 0.406]
       std: [0.229, 0.224, 0.225]
+  output_keys:
+    - images
+    - labels
 val_dataset:
   type: ImageFolder
   root: D:\Project_Data\102flowers\val
@@ -24,15 +31,28 @@ val_dataset:
     - type: Normalize
       mean: [0.485, 0.456, 0.406]
       std: [0.229, 0.224, 0.225]
+  output_keys:
+    - images
+    - labels
 trainer:
-  type: SoftmaxTrainer
+  type: trainer
   batch_size: 24
 evaluator:
-  type: Evaluator
-  metrics: [loss, accuracy]
+  type: evaluator
+  metrics:
+    - type: loss
+      loss_key: loss
+    - type: accuracy
+      label_key: labels
+      logits_key: logits
   batch_size: 24
 loss:
   type: CrossEntropyLoss
+  input_map:
+    logits: input
+    labels: target
+  output_keys:
+    - loss
 optimizer:
   type: SGD
   lr: 0.001
@@ -41,9 +61,9 @@ scheduler:
   type: ExponentialLR
   gamma: 0.98
 saver:
-  type: CheckpointSaver
+  type: saver
   save_interval: 1
   save_best_only: true
   metric: accuracy
 writer:
-  type: SummaryWriter
+  type: writer

@@ -3,6 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def get_model(config):
+    return NodeNet3D(**config)
+
+
 class NodeNet3D(nn.Module):
     def __init__(self, input_size, input_channels=3, embedding_size=128, classifier=False,
                  n_classes=3, weights_path=None):

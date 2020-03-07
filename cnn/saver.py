@@ -2,7 +2,7 @@ import os
 import json
 import torch
 
-from ..validation.metrics import get_mode
+from cnn.metrics import get_mode
 
 
 class CheckpointSaver:

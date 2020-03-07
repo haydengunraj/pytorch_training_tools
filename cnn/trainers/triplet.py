@@ -3,33 +3,8 @@ import torch
 import numpy as np
 from torch.utils import data
 
-from .losses import select_triplets, TripletLoss
-
-
-class Trainer:
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None,
-                 batch_size=1, num_workers=1, log_interval=1):
-        self.model = model
-        self.dataset = dataset
-        self.optimizer = optimizer
-        self.loss_func = loss_func
-        self.writer = writer
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self._log_interval = log_interval
-        self._loss_sum = 0
-
-    def train_epoch(self, epoch, device='cpu', start_step=0):
-        raise NotImplementedError
-
-    def _log_and_print_loss(self, epoch, step, loss):
-        self._loss_sum += loss
-        if not step % self._log_interval:
-            avg_loss = self._loss_sum/self._log_interval
-            if self.writer is not None:
-                self.writer.add_scalar('train/loss', avg_loss, step)
-            print('[epoch: {}, step: {}, loss: {:.3f}]'.format(epoch, step, avg_loss))
-            self._loss_sum = 0
+from .trainer import Trainer
+from ..losses.triplet import TripletLoss
 
 
 class TripletTrainer(Trainer):
@@ -38,8 +13,9 @@ class TripletTrainer(Trainer):
     def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class, epoch_size, writer=None,
                  batch_size=1, num_workers=1, embedding_size=128, classes_per_batch=None, log_interval=1):
         super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, log_interval)
-        if not isinstance(loss_func, TripletLoss):
-            raise ValueError('TripletTrainer may not use {} as a loss function'.format(type(loss_func).__name__))
+        if not isinstance(loss_func.loss_func, TripletLoss):
+            raise ValueError('TripletTrainer may not use {} as a loss function'.format(
+                type(loss_func.loss_func).__name__))
         if batch_size % 3:
             raise ValueError('batch_size must be a multiple of 3')
         self.num_classes = num_classes
@@ -58,10 +34,10 @@ class TripletTrainer(Trainer):
         self.embedding_size = embedding_size
         self.alpha = self.loss_func.alpha
 
-    def train_epoch(self, epoch, device='cpu', start_step=0):
+    def train_epoch(self, epoch, step, device='cpu'):
         """Train for one epoch"""
-        end_step = start_step + self.epoch_size
-        while start_step < end_step:
+        end_step = step + self.epoch_size
+        while step < end_step:
             # Select examples and set up forward pass dataloader
             batch_indices = self.sample_images()
             forward_subset = data.Subset(self.dataset, batch_indices)
@@ -83,11 +59,10 @@ class TripletTrainer(Trainer):
             # Select triplets for training
             print('Selecting triplets for training...', end='')
             t0 = time.time()
-            triplets = select_triplets(embeddings, batch_indices, self.classes_per_batch,
-                                       self.images_per_class, self.alpha)
+            triplets = self.select_triplets(embeddings, batch_indices)
             print('done, {} triplets selected ({:.3f} seconds)'.format(len(triplets), time.time() - t0))
             if self.writer is not None:
-                self.writer.add_scalar('train/num_triplets', len(triplets), start_step)
+                self.writer.add_scalar('train/num_triplets', len(triplets), step)
 
             # Set up training dataloader
             triplets = [i for triplet in triplets for i in triplet]  # flatten triplets
@@ -106,11 +81,11 @@ class TripletTrainer(Trainer):
                 loss.backward()
                 self.optimizer.step()
 
-                start_step += 1
-                self._log_and_print_loss(epoch + 1, start_step, loss.item())
-                if start_step >= end_step:
+                step += 1
+                self._log_and_print_loss(epoch + 1, step, loss.item())
+                if step >= end_step:
                     break
-        return start_step
+        return step
 
     def sample_images(self):
         sample_indices = []
@@ -122,30 +97,28 @@ class TripletTrainer(Trainer):
             sample_indices.extend(list(np.random.choice(self.class_samples[i], self.images_per_class, replace=False)))
         return sample_indices
 
+    def select_triplets(self, embeddings, indices):
+        """Randomly selects triplets which violate the triplet loss margin
+        Based on FaceNet implementation: https://github.com/davidsandberg/facenet"""
+        start_idx = 0
+        triplets = []
+        for i in range(self.classes_per_batch):
+            for j in range(1, self.images_per_class):
+                anchor_idx = start_idx + j - 1
+                neg_diffs = embeddings[anchor_idx] - embeddings
+                neg_dists_sqr = torch.sum(torch.mul(neg_diffs, neg_diffs), 1)
+                for k in range(j, self.images_per_class):
+                    positive_idx = start_idx + k
+                    pos_diff = embeddings[anchor_idx] - embeddings[positive_idx]
+                    pos_dist_sqr = torch.sum(torch.mul(pos_diff, pos_diff))
+                    neg_dists_sqr[start_idx:start_idx + self.images_per_class] = pos_dist_sqr + 1.
+                    all_neg = torch.where(neg_dists_sqr - pos_dist_sqr < self.alpha)[0]
+                    nrof_negs = all_neg.size(0)
+                    if nrof_negs > 0:
+                        rnd_idx = np.random.randint(nrof_negs)
+                        negative_idx = int(all_neg[rnd_idx].numpy())
+                        triplets.append((indices[anchor_idx], indices[positive_idx], indices[negative_idx]))
+            start_idx += self.images_per_class
 
-class SoftmaxTrainer(Trainer):
-    """Training class which trains one epoch at a time"""
-    def __init__(self, model, dataset, optimizer, loss_func, writer=None,
-                 batch_size=1, num_workers=1, log_interval=1):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, log_interval)
-
-    def train_epoch(self, epoch, device='cpu', start_step=0):
-        """Train for one epoch"""
-        # Set up dataloader
-        train_loader = data.DataLoader(self.dataset, batch_size=self.batch_size,
-                                       shuffle=True, num_workers=self.num_workers)
-        # Train for an epoch
-        print('Starting epoch {}'.format(epoch + 1))
-        for batch, lab in train_loader:
-            self.optimizer.zero_grad()
-
-            batch, lab = batch.to(device), lab.to(device)
-            out = self.model(batch)
-
-            loss = self.loss_func(out, lab)
-            loss.backward()
-            self.optimizer.step()
-
-            start_step += 1
-            self._log_and_print_loss(epoch + 1, start_step, loss.item())
-        return start_step
+        np.random.shuffle(triplets)
+        return triplets

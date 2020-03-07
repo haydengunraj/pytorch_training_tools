@@ -7,6 +7,10 @@ VAL_SUBSET = 'val'
 TEST_SUBSET = 'test'
 
 
+def get_dataset(_):
+    raise ValueError('SplitDataset may not be used directly')
+
+
 class SplitDataset:
     """Mixin class for datasets which divide data into train/val/test splits
 

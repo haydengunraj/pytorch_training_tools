@@ -37,7 +37,7 @@ if __name__ == '__main__':
             writer.add_scalar('train/learning_rate', get_lr(optimizer), step)
 
         # Train one epoch
-        step = trainer.train_epoch(epoch, device=device, start_step=step)
+        step = trainer.train_epoch(epoch + 1, step, device=device)
 
         # Update scheduler
         if scheduler is not None:
