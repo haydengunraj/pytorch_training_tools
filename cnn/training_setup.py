@@ -183,6 +183,9 @@ def get_dataset(config):
     tforms = config.get('transform')
     if tforms is not None:
         config['transform'] = transforms.Compose(get_transforms(tforms))
+    target_tforms = config.get('target_transform')
+    if target_tforms is not None:
+        config['target_transform'] = transforms.Compose(get_transforms(target_tforms))
     if config['type'] == 'kfold_dataset':
         config['loader'] = get_component('loader', config['loader'])
         config['extensions'] = tuple(config['extensions'])

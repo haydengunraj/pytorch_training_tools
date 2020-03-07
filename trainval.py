@@ -17,6 +17,10 @@ if __name__ == '__main__':
      device, start_epoch, start_step) = initialize_experiment(args.experiment, args.resume,
                                                               args.reset_optim, args.reset_sched)
 
+    # Set last saver epoch
+    if saver is not None:
+        saver.last_epoch = args.epochs
+
     # Baseline evaluation
     if evaluator is not None:
         val_metrics = evaluator.eval(start_epoch, start_step, device=device)

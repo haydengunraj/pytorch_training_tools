@@ -1,4 +1,6 @@
 from torch.utils.data import Dataset
+import numpy as np
+from math import ceil
 
 TRAIN_SUBSET = 'train'
 VAL_SUBSET = 'val'
@@ -16,6 +18,24 @@ class SplitDataset:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.indices = {TRAIN_SUBSET: [], VAL_SUBSET: [], TEST_SUBSET: []}
+        self.samples = getattr(self, 'samples', [])
+
+    def split(self, train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
+        """Splits data into train/val/test subsets"""
+        if not hasattr(self, 'samples'):
+            raise ValueError('Subclasses of SplitDataset must have a "samples" attribute')
+        if (train_fraction + val_fraction + test_fraction) > 1:
+            raise ValueError('Sum of subset fractions must be less than or equal to 1')
+        np.random.seed(seed)
+        self.samples = sorted(self.samples)
+        np.random.shuffle(self.samples)
+        train_idx = ceil(train_fraction*(len(self.samples)))
+        val_idx = train_idx + ceil(val_fraction*(len(self.samples)))
+        test_idx = val_idx + ceil(test_fraction*(len(self.samples)))
+        indices = list(range(len(self.samples)))
+        self.indices[TRAIN_SUBSET] = indices[:train_idx]
+        self.indices[VAL_SUBSET] = indices[train_idx:val_idx]
+        self.indices[TEST_SUBSET] = indices[val_idx:test_idx]
 
     def get_train_dataset(self):
         if not len(self.indices[TRAIN_SUBSET]):

@@ -43,7 +43,6 @@ class ResizeWithPad:
             raise ValueError('size must be an int or 2-tuple')
 
     def __call__(self, pil_image):
-        # return pil_image.resize((self.width, self.height))
         w, h = pil_image.size
         scale = min(self.width/w, self.height/h)
         new_size = (int(np.floor(w*scale)), int(np.floor(h*scale)))

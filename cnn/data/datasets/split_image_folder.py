@@ -1,5 +1,6 @@
 import numpy as np
 from torchvision.datasets.folder import ImageFolder
+from math import ceil
 
 from .split_dataset import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
 
@@ -20,7 +21,8 @@ class SplitImageFolder(SplitDataset, ImageFolder):
         get_val_dataset(): Returns the val dataset
 
     """
-    def __init__(self, root, train_fraction=0.8, transform=None, target_transform=None, seed=1):
+    def __init__(self, root, train_fraction=0.8, val_fraction=0.2, test_fraction=0,
+                 transform=None, target_transform=None, seed=1):
         super().__init__(root=root, transform=transform, target_transform=target_transform)
 
         if train_fraction < 0 or train_fraction > 1:
@@ -34,9 +36,9 @@ class SplitImageFolder(SplitDataset, ImageFolder):
 
         # Split data
         self.train_fraction = train_fraction
-        self._split(seed)
+        self.split(train_fraction, val_fraction, test_fraction, seed)
 
-    def _split(self, seed):
+    def split(self, train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
         """Splits the data according to self.train_fraction"""
         if len(self.indices[TRAIN_SUBSET]) or len(self.indices[VAL_SUBSET]):
             return
@@ -46,7 +48,10 @@ class SplitImageFolder(SplitDataset, ImageFolder):
             idx = self.class_to_idx[cls]
             in_class = np.where(targets == idx)[0]
             n_in_class = len(in_class)
-            split_idx = int(self.train_fraction*n_in_class)
+            train_idx = ceil(train_fraction*n_in_class)
+            val_idx = train_idx + ceil(val_fraction*n_in_class)
+            test_idx = val_idx + ceil(test_fraction*n_in_class)
             np.random.shuffle(in_class)
-            self.indices[TRAIN_SUBSET].extend(list(in_class[:split_idx]))
-            self.indices[VAL_SUBSET].extend(list(in_class[split_idx:]))
+            self.indices[TRAIN_SUBSET].extend(list(in_class[:train_idx]))
+            self.indices[VAL_SUBSET].extend(list(in_class[train_idx:val_idx]))
+            self.indices[VAL_SUBSET].extend(list(in_class[val_idx:test_idx]))
