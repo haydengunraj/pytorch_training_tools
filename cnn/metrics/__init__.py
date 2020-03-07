@@ -8,7 +8,7 @@ def get_metrics(metric_list):
         module = import_submodule(__name__, metric_type)
         if module is None:
             raise ValueError('Unrecognized metric type: ' + metric_type)
-        metric = module.get_metric(**config)
+        metric = module.get_metric(config)
         metric_dict[metric_type] = metric
     return metric_dict
 

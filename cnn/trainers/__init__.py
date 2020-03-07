@@ -6,5 +6,5 @@ def get_trainer(config):
     module = import_submodule(__name__, trainer_type)
     if module is None:
         raise ValueError('Unrecognized trainer type: ' + trainer_type)
-    trainer = module.get_trainer(**config)
+    trainer = module.get_trainer(config)
     return trainer

@@ -12,7 +12,7 @@ def get_model(config):
     weights_path = config.pop('weights_path', None)
     module = import_submodule(__name__, model_type)
     if module is not None:
-        model = module.get_model(**config)
+        model = module.get_model(config)
     else:
         model = getattr(models, model_type)
         if model is None:
