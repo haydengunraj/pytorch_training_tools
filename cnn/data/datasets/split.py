@@ -7,7 +7,7 @@ VAL_SUBSET = 'val'
 TEST_SUBSET = 'test'
 
 
-def get_dataset(_):
+def create(_):
     raise ValueError('SplitDataset may not be used directly')
 
 
@@ -23,6 +23,7 @@ class SplitDataset:
         super().__init__(*args, **kwargs)
         self.indices = {TRAIN_SUBSET: [], VAL_SUBSET: [], TEST_SUBSET: []}
         self.samples = getattr(self, 'samples', [])
+        self.splittable = True
 
     def split(self, train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
         """Splits data into train/val/test subsets"""

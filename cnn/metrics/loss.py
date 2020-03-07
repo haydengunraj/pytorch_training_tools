@@ -3,7 +3,7 @@ from .metric import Metric, MINIMIZE_MODE
 MODE = MINIMIZE_MODE
 
 
-def get_metric(config):
+def create(config):
     return LossMetric(**config)
 
 

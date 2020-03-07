@@ -1,11 +1,10 @@
 import torch
 import torch.utils.data as data
 
-from ..utils import map_inputs
 from ..metrics import get_metrics
 
 
-def get_evaluator(config):
+def create(config):
     return Evaluator(**config)
 
 
@@ -25,9 +24,9 @@ class Evaluator:
         if not epoch % self.eval_interval:
             print('\nStarting eval at step {}'.format(step))
             self.eval_pass(device=device)
-            metrics = self.get_metrics()
+            metrics = self.compute_metrics()
             self.reset_metrics()
-            self.log_and_print_metrics(step, metrics)
+            self._log_and_print_metrics(step, metrics)
             return metrics
         return None
 
@@ -50,14 +49,14 @@ class Evaluator:
         for metric in self.metrics.values():
             metric.update(data_dict)
 
-    def get_metrics(self):
+    def compute_metrics(self):
         return {name: metric.value() for name, metric in self.metrics.items()}
 
     def reset_metrics(self):
         for metric in self.metrics.values():
             metric.reset()
 
-    def log_and_print_metrics(self, step, metrics):
+    def _log_and_print_metrics(self, step, metrics):
         for metric_name, metric_val in metrics.items():
             if self.writer is not None:
                 self.writer.add_scalar('val/val_{}'.format(metric_name), metric_val, step)

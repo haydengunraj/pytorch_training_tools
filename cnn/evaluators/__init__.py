@@ -1,10 +1,7 @@
-from ..utils import import_submodule
+from ..utils import get_component
 
 
 def get_evaluator(config):
     evaluator_type = config.pop('type')
-    module = import_submodule(__name__, evaluator_type)
-    if module is None:
-        raise ValueError('Unrecognized evaluator type: ' + evaluator_type)
-    evaluator = module.get_evaluator(config)
+    evaluator = get_component(__name__, evaluator_type, config)
     return evaluator

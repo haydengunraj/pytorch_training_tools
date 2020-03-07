@@ -5,7 +5,7 @@ from .metric import Metric, MAXIMIZE_MODE
 MODE = MAXIMIZE_MODE
 
 
-def get_metric(config):
+def create(config):
     return AccuracyMetric(**config)
 
 

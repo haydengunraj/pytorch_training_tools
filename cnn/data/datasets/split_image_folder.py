@@ -5,7 +5,7 @@ from math import ceil
 from .split import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
 
 
-def get_dataset(config):
+def create(config):
     return SplitImageFolder(**config)
 
 

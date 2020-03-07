@@ -1,10 +1,8 @@
 from PIL import ImageFile
 import torchvision.datasets as datasets
 
-from .wrapper import DatasetWrapper
 from .. import get_transform
-from ...utils import import_submodule
-
+from ...utils import get_component, DatasetWrapper
 
 # Allow truncated image files to be loaded
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -17,12 +15,5 @@ def get_dataset(config):
         config['transform'] = get_transform(config['transform'])
     if config.get('target_transform') is not None:
         config['target_transform'] = get_transform(config['target_transform'])
-    module = import_submodule(__name__, dataset_type)
-    if module is not None:
-        dataset = module.get_dataset(config)
-    else:
-        dataset = getattr(datasets, dataset_type)
-        if dataset is None:
-            raise ValueError('Unrecognized dataset type: ' + dataset_type)
-        dataset = dataset(**config)
+    dataset = get_component(__name__, dataset_type, config, (datasets,))
     return DatasetWrapper(dataset, output_keys)

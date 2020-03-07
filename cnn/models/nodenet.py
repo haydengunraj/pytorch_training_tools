@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def get_model(config):
+def create(config):
     return NodeNet3D(**config)
 
 

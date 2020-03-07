@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 
 
-def get_loss(config):
+def create(config):
     return InceptionLoss(**config)
 
 

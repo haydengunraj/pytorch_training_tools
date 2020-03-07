@@ -7,7 +7,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 from tensorboardX import SummaryWriter
 
 from cnn.models import get_model
-from cnn.data.datasets import get_dataset, split
+from cnn.data.datasets import get_dataset
 from cnn.losses import get_loss as _get_loss
 from cnn.trainers import get_trainer as _get_trainer
 from cnn.evaluators import get_evaluator as _get_evaluator
@@ -47,7 +47,7 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
     train_dataset = get_dataset(config['train_dataset'])
 
     # Check for SplitDataset and initialize val dataset
-    if isinstance(train_dataset, split.SplitDataset):
+    if getattr(train_dataset, 'splittable', False):
         val_dataset = train_dataset.get_val_dataset()
         train_dataset = train_dataset.get_train_dataset()
     else:

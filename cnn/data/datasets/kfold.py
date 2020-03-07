@@ -6,7 +6,7 @@ from torchvision.datasets.folder import VisionDataset, make_dataset
 from .split import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
 
 
-def get_dataset(config):
+def create(config):
     return KFoldDatasetFolder(**config)
 
 
