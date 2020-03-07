@@ -10,11 +10,10 @@ def get_evaluator(config):
 
 
 class Evaluator:
-    def __init__(self, model, dataset, input_map, metrics, writer=None,
+    def __init__(self, model, dataset, metrics, writer=None,
                  batch_size=1, num_workers=1, eval_interval=1):
         self.model = model
         self.dataset = dataset
-        self.input_map = input_map
         self.metrics = get_metrics(metrics)
         self.writer = writer
         self.eval_interval = eval_interval
@@ -38,10 +37,6 @@ class Evaluator:
             for batch_num, data_batch in enumerate(eval_loader):
                 data_dict = {key: val.to(device) for key, val in data_batch.items()}
                 data_dict.update(self.model(data_dict))
-                data_dict.update(self.loss_func(data_dict))
-
-                model_inputs = map_inputs(data_batch, self.input_map)
-                data_dict['outputs'] = self.model(**model_inputs)
                 self.update_metrics(data_dict)
         self.model.train()
 
