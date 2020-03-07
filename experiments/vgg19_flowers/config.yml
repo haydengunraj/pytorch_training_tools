@@ -8,7 +8,7 @@ model:
     - logits
 train_dataset:
   type: ImageFolder
-  root: D:\Project_Data\102flowers\train
+  root: D:\Datasets\102flowers\train
   transform:
     - type: ResizeWithPad
       size: 256
@@ -23,7 +23,7 @@ train_dataset:
     - labels
 val_dataset:
   type: ImageFolder
-  root: D:\Project_Data\102flowers\val
+  root: D:\Datasets\102flowers\val
   transform:
     - type: ResizeWithPad
       size: 256
@@ -55,7 +55,7 @@ loss:
     - loss
 optimizer:
   type: SGD
-  lr: 0.001
+  lr: 0.01
   momentum: 0.9
 scheduler:
   type: ExponentialLR

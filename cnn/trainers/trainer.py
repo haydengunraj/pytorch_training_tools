@@ -20,6 +20,10 @@ class Trainer:
 
     def train_epoch(self, epoch, step, device='cpu'):
         """Train for one epoch"""
+        # Store current model state
+        is_training = self.model.training
+        self.model.train()
+
         # Set up dataloader
         train_loader = DataLoader(self.dataset, batch_size=self.batch_size,
                                   shuffle=True, num_workers=self.num_workers)
@@ -30,11 +34,14 @@ class Trainer:
             data_dict = {key: val.to(device) for key, val in data_batch.items()}
             data_dict.update(self.model(data_dict))
             data_dict.update(self.loss_func(data_dict))
-
             data_dict['loss'].backward()
             self.optimizer.step()
             step += 1
             self._log_and_print_loss(epoch, step, data_dict['loss'].item())
+
+        # Restore initial state
+        self.model.train(is_training)
+
         return step
 
     def _log_and_print_loss(self, epoch, step, loss):

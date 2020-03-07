@@ -74,7 +74,7 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
     trainer = get_trainer(config['trainer'], model, train_dataset, optimizer, loss_func, writer)
 
     # Initialize evaluator
-    evaluator = get_evaluator(config['evaluator'], model, val_dataset, writer) \
+    evaluator = get_evaluator(config['evaluator'], model, val_dataset, loss_func, writer) \
         if config.get('evaluator') is not None else None
 
     # Initialize checkpoint saver
@@ -165,11 +165,12 @@ def get_trainer(config, model, dataset, optimizer, loss_func, writer):
     return trainer
 
 
-def get_evaluator(config, model, dataset, writer):
+def get_evaluator(config, model, dataset, loss_func, writer):
     if dataset is None:
         return None
     config['model'] = model
     config['dataset'] = dataset
+    config['loss_func'] = loss_func
     config['writer'] = writer
     evaluator = _get_evaluator(config)
     return evaluator

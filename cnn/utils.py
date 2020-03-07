@@ -1,9 +1,9 @@
 from importlib import import_module
 
 
-def map_inputs(input_map, input_dict):
+def map_inputs(input_map, data_dict):
     """Maps data with input keys"""
-    return {input_key: input_dict[data_key] for data_key, input_key in input_map.items()}
+    return {input_key: data_dict[data_key] for data_key, input_key in input_map.items()}
 
 
 def map_outputs(output_keys, outputs):

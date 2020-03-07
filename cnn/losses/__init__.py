@@ -15,4 +15,5 @@ def get_loss(config):
         loss_func = getattr(nn, loss_type)
         if loss_func is None:
             raise ValueError('Unrecognized loss type: ' + loss_type)
+        loss_func = loss_func(**config)
     return LossWrapper(loss_func, input_map, output_keys)
