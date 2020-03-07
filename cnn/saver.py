@@ -6,6 +6,28 @@ from cnn.metrics import get_mode
 
 
 class CheckpointSaver:
+    """Model checkpoint manager
+
+    Args:
+        checkpoint_dir (str): The directory to save checkpoints to.
+        model (nn.Module): The model to save.
+        optimizer (optim.Optimizer): The optimizer to save.
+        scheduler (optim.lr_scheduler._LRScheduler): The LR scheduler to save.
+        save_interval (int, optional): The interval in epochs for which
+            checkpoints are saved (defaults to 1).
+        last_epoch (int, optional): The final epoch number. A checkpoint will
+            be saved for this epoch regardless of other settings (defaults to None).
+        prefix (str, optional): The prefix for checkpoint files (defaults to
+            checkpoint_step_).
+        save_best_only (bool, optional): A flag to only save the best checkpoint
+            based on an evaluation metric (defaults to True).
+        metric (str, optional): The name of the metric to use for selecting the
+            best checkpoint (defaults to loss).
+
+    Methods:
+        update_checkpoint(): Evaluate the current checkpoint and save it if required.
+        save_state(): Save a checkpoint in the current state.
+    """
     def __init__(self, checkpoint_dir, model, optimizer, scheduler, save_interval=1, last_epoch=None,
                  prefix='checkpoint_step_', save_best_only=True, metric='loss'):
         self.checkpoint_dir = checkpoint_dir

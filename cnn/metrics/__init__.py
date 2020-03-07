@@ -2,12 +2,12 @@ from ..utils import get_component, import_submodule
 
 
 def get_metrics(metric_list):
-    metric_dict = {}
+    metrics = []
     for config in metric_list:
         metric_type = config.pop('type')
         metric = get_component(__name__, metric_type, config)
-        metric_dict[metric_type] = metric
-    return metric_dict
+        metrics.append(metric)
+    return metrics
 
 
 def get_mode(metric_type):

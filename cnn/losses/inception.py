@@ -7,6 +7,7 @@ def create(config):
 
 
 class InceptionLoss:
+    """Loss for Inception networks which have aux logits"""
     def __init__(self, loss_type, logit_weight=1.0, aux_weight=1.0, weight=None):
         self.loss_func = getattr(F, loss_type)
         if self.loss_func is None:

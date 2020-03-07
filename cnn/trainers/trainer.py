@@ -6,6 +6,24 @@ def get_trainer(config):
 
 
 class Trainer:
+    """Basic trainer class
+
+    Args:
+        model (nn.Module, CallableWrapper): The model to be trained.
+        dataset (Dataset, DatasetWrapper): The training dataset.
+        optimizer (optim.Optimizer): The parameter optimizer.
+        loss_func (callable): The loss function.
+        writer (SummaryWriter, optional): A SummaryWriter for logging data
+            (defaults to None).
+        batch_size (int, optional): The training batch size (defaults to 1).
+        num_workers (int, optional): The number of workers to use for
+            loading data (defaults to 1).
+        log_interval: (int, optional): The interval in steps for which
+            loss is logged and printed (defaults to 1).
+
+    Methods:
+        train_epoch(): Run training for a single epoch.
+    """
     def __init__(self, model, dataset, optimizer, loss_func, writer=None,
                  batch_size=1, num_workers=1, log_interval=1):
         self.model = model
@@ -39,7 +57,7 @@ class Trainer:
             step += 1
             self._log_and_print_loss(epoch, step, data_dict['loss'].item())
 
-        # Restore initial state
+        # Restore initial model state
         self.model.train(is_training)
 
         return step

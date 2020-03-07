@@ -10,8 +10,9 @@ def create(config):
 
 
 class AccuracyMetric(Metric):
-    def __init__(self, label_key='labels', logits_key='logits'):
-        super().__init__()
+    """Running accuracy metric"""
+    def __init__(self, name, label_key='labels', logits_key='logits'):
+        super().__init__(name)
         self.label_key = label_key
         self.logits_key = logits_key
         self.correct_preds = 0
@@ -29,5 +30,6 @@ class AccuracyMetric(Metric):
         self.correct_preds = 0
         self.total_preds = 0
 
+    @property
     def value(self):
         return self.correct_preds/self.total_preds

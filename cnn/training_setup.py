@@ -27,7 +27,7 @@ def initialize_experiment(experiment, resume=False, reset_optimizer=False, reset
 
 
 def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, reset_scheduler=False):
-    """ Initializes training modules """
+    """Initializes training modules"""
     # Get device
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print('Using device {}'.format(device))

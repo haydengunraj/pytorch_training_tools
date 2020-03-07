@@ -27,10 +27,9 @@ class SplitDataset:
 
     def split(self, train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
         """Splits data into train/val/test subsets"""
-        if not hasattr(self, 'samples'):
-            raise ValueError('Subclasses of SplitDataset must have a "samples" attribute')
-        if (train_fraction + val_fraction + test_fraction) > 1:
-            raise ValueError('Sum of subset fractions must be less than or equal to 1')
+        if self.is_initialized():
+            return
+        self.ensure_fraction_sum(train_fraction, val_fraction, test_fraction)
         np.random.seed(seed)
         self.samples = sorted(self.samples)
         np.random.shuffle(self.samples)
@@ -41,6 +40,14 @@ class SplitDataset:
         self.indices[TRAIN_SUBSET] = indices[:train_idx]
         self.indices[VAL_SUBSET] = indices[train_idx:val_idx]
         self.indices[TEST_SUBSET] = indices[val_idx:test_idx]
+
+    def is_initialized(self):
+        return sum(len(subset) for subset in self.indices.values()) > 0
+
+    @staticmethod
+    def ensure_fraction_sum(*subset_fractions):
+        if sum(subset_fractions) > 1:
+            raise ValueError('Sum of subset fractions must be less than or equal to 1')
 
     def get_train_dataset(self):
         if not len(self.indices[TRAIN_SUBSET]):
@@ -59,6 +66,7 @@ class SplitDataset:
 
 
 class _SplitSubset(Dataset):
+    """A subset of a split dataset"""
     def __init__(self, dataset, subset):
         self.dataset = dataset
         self.subset = subset

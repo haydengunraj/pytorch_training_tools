@@ -2,7 +2,7 @@ import numpy as np
 from torchvision.datasets.folder import ImageFolder
 from math import ceil
 
-from .split import SplitDataset, TRAIN_SUBSET, VAL_SUBSET
+from .split import SplitDataset, TRAIN_SUBSET, VAL_SUBSET, TEST_SUBSET
 
 
 def create(config):
@@ -10,7 +10,7 @@ def create(config):
 
 
 class SplitImageFolder(SplitDataset, ImageFolder):
-    """A wrapper class which splits an ImageFolder dataset into train/test sets
+    """A wrapper class which splits an ImageFolder dataset into train/val/test sets
 
     Args:
         root (string): Root directory path.
@@ -23,10 +23,11 @@ class SplitImageFolder(SplitDataset, ImageFolder):
     Methods:
         get_train_dataset(): Returns the train dataset
         get_val_dataset(): Returns the val dataset
+        get_test_dataset(): Returns the test dataset
 
     """
-    def __init__(self, root, train_fraction=0.8, val_fraction=0.2, test_fraction=0,
-                 transform=None, target_transform=None, seed=1):
+    def __init__(self, root, transform=None, target_transform=None,
+                 train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
         super().__init__(root=root, transform=transform, target_transform=target_transform)
 
         if train_fraction < 0 or train_fraction > 1:
@@ -43,9 +44,10 @@ class SplitImageFolder(SplitDataset, ImageFolder):
         self.split(train_fraction, val_fraction, test_fraction, seed)
 
     def split(self, train_fraction=0.8, val_fraction=0.2, test_fraction=0, seed=1):
-        """Splits the data according to self.train_fraction"""
-        if len(self.indices[TRAIN_SUBSET]) or len(self.indices[VAL_SUBSET]):
+        """Splits the data according to the given fractions"""
+        if self.is_initialized():
             return
+        self.ensure_fraction_sum(train_fraction, val_fraction, test_fraction)
         np.random.seed(seed)
         targets = np.asarray(self.targets)
         for cls in self.classes:
@@ -58,4 +60,4 @@ class SplitImageFolder(SplitDataset, ImageFolder):
             np.random.shuffle(in_class)
             self.indices[TRAIN_SUBSET].extend(list(in_class[:train_idx]))
             self.indices[VAL_SUBSET].extend(list(in_class[train_idx:val_idx]))
-            self.indices[VAL_SUBSET].extend(list(in_class[val_idx:test_idx]))
+            self.indices[TEST_SUBSET].extend(list(in_class[val_idx:test_idx]))

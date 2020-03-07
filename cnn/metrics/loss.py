@@ -8,7 +8,9 @@ def create(config):
 
 
 class LossMetric(Metric):
-    def __init__(self, loss_key='loss'):
+    """Running loss metric"""
+    def __init__(self, name, loss_key='loss'):
+        super().__init__(name)
         self.loss_key = loss_key
         self.loss_sum = 0
         self.loss_count = 0
@@ -21,5 +23,6 @@ class LossMetric(Metric):
         self.loss_sum = 0
         self.loss_count = 0
 
+    @property
     def value(self):
         return self.loss_sum/self.loss_count

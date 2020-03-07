@@ -4,6 +4,7 @@ from PIL import Image
 
 
 class Unsqueeze:
+    """Add a new dimension"""
     def __init__(self, dim):
         self.dim = dim
 
@@ -15,6 +16,7 @@ class Unsqueeze:
 
 
 class RandomPermute:
+    """Randomly permutes the given axes"""
     def __init__(self, p=0.5, dims=(1, 2)):
         self.p = p
         self.dims = dims
@@ -31,6 +33,7 @@ class RandomPermute:
 
 
 class ResizeWithPad:
+    """Resizes to square images while maintaining aspect ratio using padding"""
     def __init__(self, size, pad_value=0):
         self.pad_value = pad_value
         if isinstance(size, int):
