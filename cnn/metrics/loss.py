@@ -23,6 +23,9 @@ class LossMetric(Metric):
         self.loss_sum = 0
         self.loss_count = 0
 
+    def log(self, writer, step, tag_prefix='val/'):
+        writer.add_scalar(tag_prefix + self.name, self.value, step)
+
     @property
     def value(self):
         return self.loss_sum/self.loss_count

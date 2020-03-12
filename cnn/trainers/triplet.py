@@ -1,8 +1,9 @@
 import time
 import torch
 import numpy as np
-from torch.utils import data
+from torch.utils.data import Subset, DataLoader
 
+from ..utils import LOSS_KEY
 from .trainer import Trainer
 from ..losses.triplet import TripletLoss
 
@@ -10,14 +11,18 @@ from ..losses.triplet import TripletLoss
 class TripletTrainer(Trainer):
     """Training class which trains one 'epoch' at a time
     Based on FaceNet implementation: https://github.com/davidsandberg/facenet"""
-    def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class, epoch_size, writer=None,
-                 batch_size=1, num_workers=1, embedding_size=128, classes_per_batch=None, log_interval=1):
-        super().__init__(model, dataset, optimizer, loss_func, writer, batch_size, num_workers, log_interval)
+    def __init__(self, model, dataset, optimizer, loss_func, num_classes, images_per_class,
+                 epoch_size, embedding_key, writer=None, embedding_size=128, classes_per_batch=None,
+                 batch_size=1, num_workers=1, log_interval=1, tag_prefix='train/'):
+
+        super().__init__(model, dataset, optimizer, loss_func, writer,
+                         batch_size, num_workers, log_interval, tag_prefix)
         if not isinstance(loss_func.loss_func, TripletLoss):
             raise ValueError('TripletTrainer may not use {} as a loss function'.format(
                 type(loss_func.loss_func).__name__))
         if batch_size % 3:
             raise ValueError('batch_size must be a multiple of 3')
+
         self.num_classes = num_classes
         self.class_indices = list(range(self.num_classes))
         target_array = np.array(self.dataset.targets)
@@ -27,11 +32,12 @@ class TripletTrainer(Trainer):
             raise ValueError('images_per_class may not exceed the smallest number of examples for a class')
         self.classes_per_batch = classes_per_batch if classes_per_batch is not None else self.num_classes
         if self.classes_per_batch > self.num_classes:
-            raise ValueError('classes_per_batch may exceed the number of classes')
+            raise ValueError('classes_per_batch may not exceed the number of classes')
         self.images_per_class = images_per_class
         self.images_per_batch = self.classes_per_batch*self.images_per_class
         self.epoch_size = epoch_size
         self.embedding_size = embedding_size
+        self.embedding_key = embedding_key
         self.alpha = self.loss_func.alpha
 
     def train_epoch(self, epoch, step, device='cpu'):
@@ -40,9 +46,9 @@ class TripletTrainer(Trainer):
         while step < end_step:
             # Select examples and set up forward pass dataloader
             batch_indices = self.sample_images()
-            forward_subset = data.Subset(self.dataset, batch_indices)
-            forward_loader = data.DataLoader(forward_subset, batch_size=self.batch_size,
-                                             shuffle=False, num_workers=self.num_workers)
+            forward_subset = Subset(self.dataset, batch_indices)
+            forward_loader = DataLoader(forward_subset, batch_size=self.batch_size,
+                                        shuffle=False, num_workers=self.num_workers)
 
             # Perform forward pass
             print('Starting forward pass...', end='')
@@ -50,10 +56,10 @@ class TripletTrainer(Trainer):
             embeddings = torch.zeros((self.images_per_batch, self.embedding_size))
             with torch.no_grad():
                 for batch_num, data_batch in enumerate(forward_loader):
-                    batch, _ = data_batch
-                    batch = batch.to(device)
-                    emb = self.model(batch)
-                    embeddings[batch_num*self.batch_size:(batch_num+1)*self.batch_size, :] = emb
+                    data_dict = {key: val.to(device) for key, val in data_batch.items()}
+                    data_dict.update(self.model(data_dict))
+                    embeddings[batch_num*self.batch_size:(batch_num+1)*self.batch_size, :] = \
+                        data_dict[self.embedding_key]
             print('done ({:.3f} seconds)'.format(time.time() - t0))
 
             # Select triplets for training
@@ -62,27 +68,27 @@ class TripletTrainer(Trainer):
             triplets = self.select_triplets(embeddings, batch_indices)
             print('done, {} triplets selected ({:.3f} seconds)'.format(len(triplets), time.time() - t0))
             if self.writer is not None:
-                self.writer.add_scalar('train/num_triplets', len(triplets), step)
+                self.writer.add_scalar(self.tag_prefix + 'num_triplets', len(triplets), step)
 
             # Set up training dataloader
             triplets = [i for triplet in triplets for i in triplet]  # flatten triplets
-            train_subset = data.Subset(self.dataset, triplets)
-            train_loader = data.DataLoader(train_subset, batch_size=self.batch_size,
-                                           shuffle=False, num_workers=self.num_workers)
+            train_subset = Subset(self.dataset, triplets)
+            train_loader = DataLoader(train_subset, batch_size=self.batch_size,
+                                      shuffle=False, num_workers=self.num_workers)
 
             # Train on selected triplets
-            for batch, lab in train_loader:
+            for data_batch in train_loader:
                 self.optimizer.zero_grad()
 
-                batch = batch.to(device)
-                emb = self.model(batch)
+                data_dict = {key: val.to(device) for key, val in data_batch.items()}
+                data_dict.update(self.model(data_dict))
+                data_dict.update(self.loss_func(data_dict))
 
-                loss = self.loss_func(emb)
-                loss.backward()
+                data_dict[LOSS_KEY].backward()
                 self.optimizer.step()
 
                 step += 1
-                self._log_and_print_loss(epoch + 1, step, loss.item())
+                self._log_and_print(epoch + 1, step, data_dict)
                 if step >= end_step:
                     break
         return step

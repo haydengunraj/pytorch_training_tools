@@ -1,5 +1,7 @@
 from importlib import import_module
 
+LOSS_KEY = 'loss'
+
 
 def map_inputs(input_keys, data_dict):
     """Maps data with input keys"""

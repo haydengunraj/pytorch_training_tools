@@ -20,21 +20,24 @@ class Evaluator:
             metrics (defaults to None).
         writer (SummaryWriter, optional): A SummaryWriter for logging data
             (defaults to None).
+        eval_interval: (int, optional): The interval in epochs for which
+            eval is performed (defaults to 1).
         batch_size (int, optional): The evaluation batch size (defaults to 1).
         num_workers (int, optional): The number of workers to use for
             loading data (defaults to 1).
-        eval_interval: (int, optional): The interval in epochs for which
-            eval is performed (defaults to 1).
+        tag_prefix (str, optional): The prefix appended to logging tags
+            (defaults to val/).
 
     Methods:
         eval(): Runs the evaluation process.
         eval_pass(): Runs the cor evaluation loop.
         update_metrics(): Updates running metric values.
-        compute_metrics(): Computes final metric values.
         reset_metrics(): Resets all metric values.
+        final_metrics(): Computes final metric values and performs printing
+            and logging.
     """
     def __init__(self, model, dataset, metrics, loss_func=None, writer=None,
-                 batch_size=1, num_workers=1, eval_interval=1):
+                 eval_interval=1, batch_size=1, num_workers=1, tag_prefix='val/'):
         self.model = model
         self.dataset = dataset
         self.loss_func = loss_func
@@ -43,14 +46,14 @@ class Evaluator:
         self.eval_interval = eval_interval
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.tag_prefix = tag_prefix
 
     def eval(self, epoch, step, device='cpu'):
         if not epoch % self.eval_interval:
             print('\nStarting eval at step {}'.format(step))
-            self.eval_pass(device=device)
-            metrics = self.compute_metrics()
             self.reset_metrics()
-            self._log_and_print_metrics(step, metrics)
+            self.eval_pass(device=device)
+            metrics = self.final_metrics(step)
             return metrics
         return None
 
@@ -79,15 +82,17 @@ class Evaluator:
         for metric in self.metrics:
             metric.update(data_dict)
 
-    def compute_metrics(self):
-        return {metric.name: metric.value for metric in self.metrics}
-
     def reset_metrics(self):
         for metric in self.metrics:
             metric.reset()
 
-    def _log_and_print_metrics(self, step, metrics):
-        for metric_name, metric_val in metrics.items():
+    def final_metrics(self, step):
+        metrics = {}
+        for metric in self.metrics:
+            name, value = metric.name, metric.value
+            if value is not None:
+                print('{}: {}'.format(name.title(), value), flush=True)
+                metrics[name] = value
             if self.writer is not None:
-                self.writer.add_scalar('val/val_{}'.format(metric_name), metric_val, step)
-            print('{}: {}'.format(metric_name.title(), metric_val), flush=True)
+                metric.log(self.writer, step, self.tag_prefix)
+        return metrics
