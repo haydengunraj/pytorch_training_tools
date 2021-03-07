@@ -1,7 +1,7 @@
 import torch
-import torch.utils.data as data
+from torch.utils.data import DataLoader
 
-from ..metrics import get_metrics
+from ..metrics import get_metrics, VALUE_KEY, MODE_KEY
 
 
 def create(config):
@@ -47,6 +47,8 @@ class Evaluator:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.tag_prefix = tag_prefix
+        self.dataloader = DataLoader(self.dataset, batch_size=self.batch_size,
+                                     shuffle=True, num_workers=self.num_workers)
 
     def eval(self, epoch, step, device='cpu'):
         if not epoch % self.eval_interval:
@@ -62,13 +64,9 @@ class Evaluator:
         is_training = self.model.training
         self.model.eval()
 
-        # Set up dataloader
-        eval_loader = data.DataLoader(self.dataset, batch_size=self.batch_size,
-                                      shuffle=False, num_workers=self.num_workers)
-
         # Run eval loop
         with torch.no_grad():
-            for batch_num, data_batch in enumerate(eval_loader):
+            for data_batch in self.dataloader:
                 data_dict = {key: val.to(device) for key, val in data_batch.items()}
                 data_dict.update(self.model(data_dict))
                 if self.loss_func is not None:
@@ -91,8 +89,8 @@ class Evaluator:
         for metric in self.metrics:
             name, value = metric.name, metric.value
             if value is not None:
-                print('{}: {}'.format(name.title(), value), flush=True)
-                metrics[name] = value
+                print('{}: {}'.format(name, value), flush=True)
+                metrics[name] = {VALUE_KEY: value, MODE_KEY: metric.mode}
             if self.writer is not None:
                 metric.log(self.writer, step, self.tag_prefix)
         return metrics

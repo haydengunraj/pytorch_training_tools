@@ -2,7 +2,8 @@ import os
 import json
 import torch
 
-from cnn.metrics import get_mode
+from .metrics import VALUE_KEY, MODE_KEY
+from .metrics.metric import MINIMIZE_MODE, MAXIMIZE_MODE
 
 
 class CheckpointSaver:
@@ -44,7 +45,6 @@ class CheckpointSaver:
         self.checkpoint_dict = None
         self.metric = metric
         self.last_metric_val = None
-        self.mode = get_mode(metric)
 
     def update_checkpoint(self, epoch, step, metric_vals=None):
         if epoch == self.last_epoch:
@@ -63,15 +63,16 @@ class CheckpointSaver:
                         save_str = '{} improved from {} to {:.3f}, saving checkpoint'
                     else:
                         save_str = '{} improved from {:.3f} to {:.3f}, saving checkpoint'
-                    print(save_str.format(self.metric.capitalize(), self.last_metric_val, metric_vals[self.metric]))
-                    self.last_metric_val = metric_vals[self.metric]
+                    print(save_str.format(self.metric, self.last_metric_val,
+                                          metric_vals[self.metric][VALUE_KEY]))
+                    self.last_metric_val = metric_vals[self.metric][VALUE_KEY]
 
                     if self.save_path is not None:
                         self._remove_previous_checkpoint()
                     self.save_path = path
                 else:
                     print('{} worsened from {:.3f} to {:.3f}, not saving checkpoint'.format(
-                        self.metric.capitalize(), self.last_metric_val, metric_vals[self.metric]))
+                        self.metric, self.last_metric_val, metric_vals[self.metric][VALUE_KEY]))
             else:
                 self.save_state(epoch, step)
                 print('Saved checkpoint at epoch {}, step {}'.format(epoch, step))
@@ -80,8 +81,8 @@ class CheckpointSaver:
         if metric_val is None:
             raise ValueError('No metric value given')
         if (self.last_metric_val is None
-                or self.mode == 'minimize' and metric_val < self.last_metric_val
-                or self.mode == 'maximize' and metric_val > self.last_metric_val):
+                or metric_val[MODE_KEY] == MINIMIZE_MODE and metric_val[VALUE_KEY] < self.last_metric_val
+                or metric_val[MODE_KEY] == MAXIMIZE_MODE and metric_val[VALUE_KEY] > self.last_metric_val):
             return True
         return False
 

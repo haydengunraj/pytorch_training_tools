@@ -1,3 +1,4 @@
+import torch
 import random
 import numpy as np
 from PIL import Image
@@ -53,3 +54,14 @@ class ResizeWithPad:
         new_array = np.ones((self.height, self.width, len(pil_image.getbands())), dtype=np.uint8)*int(self.pad_value)
         new_array[:new_size[1], :new_size[0], ...] = resized_arr
         return Image.fromarray(new_array)
+
+
+class Cast:
+    """Cast target to a different dtype"""
+    def __init__(self, dtype):
+        self.dtype = getattr(torch, dtype, None)
+        if self.dtype is None:
+            raise ValueError('Invalid dtype: ' + dtype)
+
+    def __call__(self, target):
+        return torch.tensor(target).type(self.dtype)

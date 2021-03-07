@@ -41,6 +41,8 @@ class Trainer:
         self.num_workers = num_workers
         self.log_interval = log_interval
         self.tag_prefix = tag_prefix
+        self.dataloader = DataLoader(self.dataset, batch_size=self.batch_size,
+                                     shuffle=True, num_workers=self.num_workers)
 
     def train_epoch(self, epoch, step, device='cpu'):
         """Train for one epoch"""
@@ -48,12 +50,9 @@ class Trainer:
         is_training = self.model.training
         self.model.train()
 
-        # Set up dataloader
-        train_loader = DataLoader(self.dataset, batch_size=self.batch_size,
-                                  shuffle=True, num_workers=self.num_workers)
         # Train for an epoch
-        print('Starting epoch {}'.format(epoch))
-        for data_batch in train_loader:
+        print('\nStarting epoch {}'.format(epoch))
+        for data_batch in self.dataloader:
             self.optimizer.zero_grad()
             data_dict = {key: val.to(device) for key, val in data_batch.items()}
 

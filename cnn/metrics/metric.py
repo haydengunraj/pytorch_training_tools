@@ -4,8 +4,9 @@ MINIMIZE_MODE = 'minimize'
 
 class Metric:
     """Base class for all metrics"""
-    def __init__(self, name):
+    def __init__(self, name, mode):
         self.name = name
+        self.mode = mode
 
     def update(self, data_dict):
         """Update running values"""

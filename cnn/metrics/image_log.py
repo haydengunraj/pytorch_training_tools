@@ -1,8 +1,6 @@
 import torch
 from .metric import LogMetric
 
-MODE = None
-
 
 def create(config):
     return ImageLogMetric(**config)

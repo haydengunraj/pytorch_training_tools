@@ -1,4 +1,8 @@
-from ..utils import get_component, import_submodule
+from ..utils import get_component
+
+# Keys for evaluator and saver
+VALUE_KEY = 'value'
+MODE_KEY = 'mode'
 
 
 def get_metrics(metric_list):
@@ -8,12 +12,3 @@ def get_metrics(metric_list):
         metric = get_component(__name__, metric_type, config)
         metrics.append(metric)
     return metrics
-
-
-def get_mode(metric_type):
-    try:
-        module = import_submodule(__name__, metric_type)
-        mode = module.MODE
-    except ImportError:
-        raise ValueError('Unrecognized component type: ' + metric_type)
-    return mode

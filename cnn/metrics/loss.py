@@ -1,7 +1,5 @@
 from .metric import Metric, MINIMIZE_MODE
 
-MODE = MINIMIZE_MODE
-
 
 def create(config):
     return LossMetric(**config)
@@ -10,7 +8,7 @@ def create(config):
 class LossMetric(Metric):
     """Running loss metric"""
     def __init__(self, name, loss_key='loss'):
-        super().__init__(name)
+        super().__init__(name, MINIMIZE_MODE)
         self.loss_key = loss_key
         self.loss_sum = 0
         self.loss_count = 0

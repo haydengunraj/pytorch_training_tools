@@ -12,6 +12,7 @@ from cnn.losses import get_loss as _get_loss
 from cnn.trainers import get_trainer as _get_trainer
 from cnn.evaluators import get_evaluator as _get_evaluator
 from cnn.saver import CheckpointSaver
+from cnn.utils import DatasetWrapper
 
 TORCH_HOME = 'weights'
 EXPERIMENT_ROOT = 'experiments'
@@ -48,8 +49,8 @@ def _initialize(experiment_dir, config, resume=False, reset_optimizer=False, res
 
     # Check for SplitDataset and initialize val dataset
     if getattr(train_dataset, 'splittable', False):
-        val_dataset = train_dataset.get_val_dataset()
-        train_dataset = train_dataset.get_train_dataset()
+        val_dataset = DatasetWrapper(train_dataset.get_val_dataset(), train_dataset.output_keys)
+        train_dataset = DatasetWrapper(train_dataset.get_train_dataset(), train_dataset.output_keys)
     else:
         val_dataset = get_dataset(config['val_dataset']) if config.get('val_dataset') is not None else None
 
